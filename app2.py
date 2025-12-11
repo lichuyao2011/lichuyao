@@ -398,7 +398,7 @@ def build_clickables(lang: str, rec_list):
 # =========================
 # 雷达图（问卷）读取
 # =========================
-RADAR_XLSX_PATH = Path("/Users/lichuyao/Desktop/频率分析/日本人数据.xlsx") 
+RADAR_XLSX_PATH = Path("日本人数据.xlsx") 
 RADAR_DIMS = ["怒り", "嫌悪", "恐怖", "喜び", "悲しみ", "驚き"]
 
 NORMALIZE_MODE = "per_emoji"
