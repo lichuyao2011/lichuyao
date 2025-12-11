@@ -1,0 +1,10 @@
+streamlit
+numpy
+pandas
+matplotlib
+torch
+transformers
+emoji
+openpyxl
+janome
+streamlit-keyup
