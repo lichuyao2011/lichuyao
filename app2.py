@@ -489,6 +489,16 @@ if _RADAR_DF is None:
 # =========================
 @st.cache_resource
 def _find_cjk_font():
+    # ✅ 1) 优先用仓库里自带字体（最稳：线上/本地一致）
+    bundled = ROOT / "fonts" / "NotoSansCJKjp-Regular.otf"
+    if bundled.exists():
+        try:
+            # 直接用文件路径构造 FontProperties（不依赖系统安装）
+            return fm.FontProperties(fname=str(bundled))
+        except Exception:
+            pass
+
+    # 2) 再尝试系统字体（可选兜底）
     candidates = [
         "Noto Sans CJK JP", "NotoSansCJKJP", "Source Han Sans JP", "Source Han Sans",
         "Arial Unicode MS", "Yu Gothic", "MS Gothic", "Hiragino Kaku Gothic ProN",
@@ -502,11 +512,8 @@ def _find_cjk_font():
                 return fm.FontProperties(fname=path)
         except Exception:
             pass
-    try:
-        path = fm.findfont(fm.FontProperties(), fallback_to_default=True)
-        return fm.FontProperties(fname=path)
-    except Exception:
-        return None
+
+    return None
 
 def _apply_scale(vals):
     if RADAR_SCALE == "log1p":
