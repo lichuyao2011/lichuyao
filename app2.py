@@ -497,7 +497,7 @@ def _find_cjk_font():
             return fm.FontProperties(fname=str(bundled))
         except Exception:
             pass
-
+        
     # 2) 再尝试系统字体（可选兜底）
     candidates = [
         "Noto Sans CJK JP", "NotoSansCJKJP", "Source Han Sans JP", "Source Han Sans",
