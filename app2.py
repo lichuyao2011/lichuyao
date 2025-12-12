@@ -398,7 +398,7 @@ def build_clickables(lang: str, rec_list):
 # =========================
 # 雷达图（问卷）读取
 # =========================
-RADAR_XLSX_PATH = Path("日本人数据.xlsx") 
+RADAR_XLSX_PATH = Path("/Users/lichuyao/Desktop/频率分析/日本人数据.xlsx") 
 RADAR_DIMS = ["怒り", "嫌悪", "恐怖", "喜び", "悲しみ", "驚き"]
 
 NORMALIZE_MODE = "per_emoji"
@@ -470,7 +470,7 @@ if _RADAR_DF is None:
                 df_uploaded = df_uploaded.rename(columns={df_uploaded.columns[0]: "emoji"})
             if df_uploaded.columns[0] != "emoji":
                 col0_name = df_uploaded.columns[0]
-                if isinstance(col0_name, str) and any(ord(ch) > 1000 for ch in col0_name):
+                if isinstance(col0_name, str) and any(ord(ch) > 1000 for col0_name in col0_name):
                     df_uploaded = df_uploaded.rename(columns={df_uploaded.columns[0]: "emoji"})
             df_uploaded = df_uploaded.dropna(how="all")
             if "emoji" in df_uploaded.columns:
@@ -624,16 +624,26 @@ with st.sidebar:
     lang = st.radio("Language / 言語", ["中国語", "英語", "日本語"], index=0, horizontal=False)
     
     w_sem_slider = st.slider(
-        "语义权重 (w_sem)", 
+        "BERT語義重量", 
         min_value=0.0, 
         max_value=1.0, 
         value=DEFAULT_W_SEM, # 默认值 0.3
         step=0.05,
         help="""
-        调整 BERT 语义在“BERT 语义”行中的权重：
-        - 0.0: 纯共现 (热门度)
-        - 0.5: 共现与语义各占一半
-        - 1.0: 纯语义 (相关度)
+        「BERT 语義」行における BERT 语義の重みを調整する：
+        - 0.0: 共起のみ
+        - 0.5: 共起と语义が半分ずつ
+        - 1.0: 语义のみ
+- **推薦（共起）**  
+  共起による推薦は，私たちが独自に収集したデータを基に行い，自作データベースとの照合によって絵文字を推薦している。
+
+- **推薦（BERTモデル）**  
+  上の「共起」による頻度だけでなく，BERT という言語モデルで計算した。
+  文章の意味と絵文字の意味の近さ（類似度）も加味して並び替えた結果です。  
+
+- **BERT語義重量**  
+  共起による頻度と意味の近さをどれくらいの割合で混ぜるかを調整するための重みです。
+
         """
     )
 
@@ -643,26 +653,22 @@ with st.sidebar:
 st.title("Emoji推薦")
 placeholder = {"中国語":"输入句子（中文）", "英語":"Type an English sentence", "日本語":"日本語の文を入力"}
 
-# 1. 使用 st_keyup 实现实时推荐
-if _HAVE_DEBOUNCE:
-    txt = st_keyup(
-        "输入句子 / Sentence / 入力文",
-        placeholder=placeholder[lang],
-        key="input_text_field", 
-        debounce=300 
-    )
-else:
-    st.warning("实时推荐(streamlit-keyup)加载失败, 请手动点击 '推薦' 按钮")
-    txt = st.text_input(
-        "输入句子 / Sentence / 入力文",
-        placeholder=placeholder[lang],
-        key="input_text_field"
-    )
+# ==== 按照你“能追加的版本”修改的部分（只改这里） ====
+# 使用普通 text_input + session_state，保证按钮追加生效
+if "input_text" not in st.session_state:
+    st.session_state["input_text"] = ""
 
-# 2. 添加手动推荐按钮
+txt = st.text_input(
+    "输入句子 / Sentence / 入力文",
+    placeholder=placeholder[lang],
+    key="input_text_field"
+)
+
+# 手动推荐按钮：触发 rerun（你也可以不点，输入时回车也会触发）
 st.button("推薦") 
 
 st.markdown("---")
+# ==== 修改结束，其它逻辑保持不变 ====
 
 # 3. 实时计算逻辑 (始终为三语计算 BERT，并传入 w_sem_slider)
 files_co, labels_co = [], []
@@ -672,8 +678,8 @@ info_msg_co = ""
 info_msg_bert = ""
 
 if not current_text:
-    info_msg_co = "共起：输入句子即可实时推荐..."
-    info_msg_bert = "BERT：输入句子即可实时推荐..."
+    info_msg_co = ""
+    info_msg_bert = ""
 else:
     if lang == "中国語":
         _, rec_co = recommend_cn(current_text, top_k=DEFAULT_TOP_K, use_semantic=False)
@@ -698,7 +704,6 @@ else:
 
     if not labels_co: info_msg_co = "共起：无匹配推荐"
     if not labels_bert: info_msg_bert = "BERT：无匹配推荐"
-
 
 # 4. 插入回调
 def _append_to_input(token: str):
@@ -734,7 +739,7 @@ if lang == "日本語":
         for col in df.columns:
             try:
                 mask = df[col].astype(str).str.contains(lab, na=False)
-                if mask.any(): return df[col].iloc[0], f"contains_in_col:{col}"
+                if mask.any(): return df[mask].iloc[0], f"contains_in_col:{col}"
             except Exception: continue
         return None, "no_match"
 
@@ -769,7 +774,22 @@ def render_item(col, item_key, label, files_dict, lang):
                     except Exception: pass
 
 # --- 渲染“共起”行 (所有语言) ---
+# --- 渲染“共起”行 (所有语言) ---
 st.markdown("**推薦（共起）**")
+
+# 日语模式下：折叠显示雷达图说明（点击展开）
+if lang == "日本語":
+    with st.expander("レーダーチャートの見方", expanded=False):
+        st.markdown(
+            """
+- このレーダーチャートは，絵文字に対して回答者が感じた 6つの基本感情
+  （怒り・嫌悪・恐怖・喜び・悲しみ・驚き）の強さを表しています．  
+- 線が外側に近いほど，その絵文字に対して その感情が強く／よく選ばれている ことを意味します．   
+- 本システムでは，日本人大学生を対象としたアンケート調査の結果をもとに，
+  正規化した値をプロットしています．
+            """
+        )
+
 if labels_co:
     # 为中文创建 label -> file 映射
     files_dict_co = {label: file for label, file in zip(labels_co, files_co)} if lang == "中国語" else {}
@@ -780,7 +800,7 @@ else:
     st.info(info_msg_co)
 
 # --- 渲染“BERT”行 (所有语言) ---
-st.markdown("**推薦（BERT）**")
+st.markdown("**推薦（BERTモデル）**")
 if labels_bert:
     # 为中文创建 label -> file 映射
     files_dict_bert = {label: file for label, file in zip(labels_bert, files_bert)} if lang == "中国語" else {}
