@@ -628,7 +628,7 @@ def _get_radar_values_for_emoji(df: pd.DataFrame, emoji_key: str):
 # =========================
 with st.sidebar:
     st.header("⚙️ 设置 / Settings")
-    lang = st.radio("Language / 言語", ["中国語", "英語", "日本語"], index=0, horizontal=False)
+    lang = st.radio("言語 / Language ", ["中国語", "英語", "日本語"], index=0, horizontal=False)
     
     w_sem_slider = st.slider(
         "BERT語義重量", 
@@ -657,7 +657,7 @@ with st.sidebar:
 # =========================
 # UI：主区域
 # =========================
-st.title("Emoji推薦")
+st.title("Emoji推薦システム")
 placeholder = {"中国語":"输入句子（中文）", "英語":"Type an English sentence", "日本語":"日本語の文を入力"}
 
 # ==== 按照你“能追加的版本”修改的部分（只改这里） ====
@@ -782,7 +782,7 @@ def render_item(col, item_key, label, files_dict, lang):
 
 # --- 渲染“共起”行 (所有语言) ---
 # --- 渲染“共起”行 (所有语言) ---
-st.markdown("**推薦（共起）**")
+st.markdown("**推薦**")
 
 # 日语模式下：折叠显示雷达图说明（点击展开）
 if lang == "日本語":
